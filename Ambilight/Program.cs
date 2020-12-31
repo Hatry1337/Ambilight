@@ -1,9 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using System.Runtime.InteropServices;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Windows.Media;
 using MSIRGB;
 
@@ -18,17 +15,19 @@ namespace Ambilight
             {
                 light = new Lighting(false);
                 FastGetPixel fgp = new FastGetPixel();
-                Color last = Color.FromRgb(0, 0, 0);
+                int swidth = System.Windows.Forms.Screen.PrimaryScreen.Bounds.Size.Width;
+                int sheight = System.Windows.Forms.Screen.PrimaryScreen.Bounds.Size.Height;
                 while (true){
-                    fgp.LockWindowImage(0, 0, System.Windows.Forms.Screen.PrimaryScreen.Bounds.Size.Width, System.Windows.Forms.Screen.PrimaryScreen.Bounds.Size.Height, System.Drawing.Imaging.PixelFormat.Format32bppPArgb);
+                    fgp.LockWindowImage(0, 0, swidth, sheight, System.Drawing.Imaging.PixelFormat.Format32bppPArgb);
+
                     int r = 0;
                     int g = 0;
                     int b = 0;
-
                     int d = 0;
-                    for (int j = 0; j < System.Windows.Forms.Screen.PrimaryScreen.Bounds.Size.Height; j+=20)
+
+                    for (int j = 0; j < sheight; j+=50)
                     {
-                        for (int i = 0; i < System.Windows.Forms.Screen.PrimaryScreen.Bounds.Size.Width; i+=20)
+                        for (int i = 0; i < swidth; i+=50)
                         {
                             System.Drawing.Color c1 = fgp.GetLockedPixel(i, j);
                             r += c1.R;
@@ -37,29 +36,17 @@ namespace Ambilight
                             d++;
                         }
                     }
-                    fgp.Clear();
-                    r /= d;
-                    g /= d;
-                    b /= d;
 
-                    for (float i = 0; i < 1f; i += 0.03f)
+                    light.BatchBegin();
+
+                    for (byte j = 1; j < 9; j++)
                     {
-
-                        int mixR = (int)(last.R * (1f - i) + r * i);
-                        int mixG = (int)(last.G * (1f - i) + g * i);
-                        int mixB = (int)(last.B * (1f - i) + b * i);
-
-                        light.BatchBegin();
-
-                        for (byte j = 1; j < 9; j++)
-                        {
-                            light.SetColour(j, Color.FromRgb((byte)(mixR/ 0x11), (byte)(mixG/ 0x11), (byte)(mixB/ 0x11)));
-                        }
-
-                        light.BatchEnd();
+                        light.SetColour(j, Color.FromRgb((byte)(r / d / 0x11), (byte)(g / d / 0x11), (byte)(b / d / 0x11)));
                     }
-                    last = Color.FromRgb((byte)r, (byte)g, (byte)b);
-                    //Thread.Sleep(10);
+
+                    light.BatchEnd();
+                    fgp.Clear();
+                    Thread.Sleep(10);
                 }
             }
             catch (Lighting.Exception exc)
